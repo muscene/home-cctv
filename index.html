@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detection Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .dark-mode {
+            background-color: #1a202c;
+            color: #cbd5e0;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+
+    <!-- Navbar -->
+    <nav class="bg-blue-700 text-white py-4 shadow-md fixed w-full z-10">
+        <div class="container mx-auto flex justify-between items-center px-4">
+            <h1 class="text-3xl font-semibold"><i class="fas fa-shield-alt mr-2"></i>Detection Dashboard</h1>
+            <div class="flex items-center space-x-6">
+                <button id="darkModeToggle" class="text-lg hover:text-gray-300">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <a href="#" class="hover:text-gray-300">Home</a>
+                <a href="#" class="hover:text-gray-300">Settings</a>
+                <a href="#" class="hover:text-gray-300">Profile</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Container -->
+    <div class="flex flex-col md:flex-row mt-16">
+        <!-- Sidebar -->
+        <aside class="w-full md:w-64 bg-gray-800 text-white min-h-screen p-6">
+            <h2 class="text-2xl font-bold mb-6"><i class="fas fa-bars mr-2"></i>Menu</h2>
+            <ul class="space-y-4">
+                <li><a href="#" class="block px-4 py-2 rounded hover:bg-blue-600 transition">Dashboard</a></li>
+                <li><a href="#" class="block px-4 py-2 rounded hover:bg-blue-600 transition">Detection Records</a></li>
+                <li><a href="#" class="block px-4 py-2 rounded hover:bg-blue-600 transition">Notifications</a></li>
+                <li><a href="#" class="block px-4 py-2 rounded hover:bg-blue-600 transition">Settings</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-6 bg-white shadow-md rounded-lg m-4">
+            <!-- Notification Section -->
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded flex items-center">
+                <i class="fas fa-exclamation-circle mr-2"></i>
+                <p>New detection records have been added. Check them below.</p>
+            </div>
+
+            <!-- Search and Export -->
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 space-y-4 md:space-y-0">
+                <input id="search-bar" type="text" placeholder="Search by Object" 
+                    class="border rounded-lg px-4 py-2 w-full md:w-1/2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button id="export-btn" class="bg-blue-500 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-600 transition">
+                    <i class="fas fa-file-export mr-2"></i>Export CSV
+                </button>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full table-auto bg-gray-50 rounded-lg shadow-md">
+                    <thead class="bg-gray-200 sticky top-0">
+                        <tr class="text-gray-700">
+                            <th class="px-4 py-3 text-left">ID</th>
+                            <th class="px-4 py-3 text-left">Timestamp</th>
+                            <th class="px-4 py-3 text-left">Object</th>
+                            <th class="px-4 py-3 text-left">Confidence</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detection-table" class="divide-y divide-gray-300">
+                        <!-- Data will be inserted dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div id="pagination" class="mt-6 flex justify-center space-x-2"></div>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-4">
+        <div class="container mx-auto text-center">
+            <p>&copy; 2024 Detection Dashboard. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        let detections = [];
+        let currentPage = 1;
+        const rowsPerPage = 10;
+
+        async function fetchDetections() {
+            const response = await fetch('/api/detections');
+            detections = await response.json();
+            displayTable();
+            setupPagination();
+        }
+
+        function displayTable() {
+            const tableBody = document.getElementById('detection-table');
+            tableBody.innerHTML = '';
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+
+            detections.slice(start, end).forEach(detection => {
+                const row = `
+                    <tr class="hover:bg-gray-100 transition">
+                        <td class="px-4 py-3">${detection.id}</td>
+                        <td class="px-4 py-3">${detection.timestamp}</td>
+                        <td class="px-4 py-3">${detection.detected_object}</td>
+                        <td class="px-4 py-3">${detection.confidence.toFixed(2)}</td>
+                    </tr>`;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        function setupPagination() {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+            const totalPages = Math.ceil(detections.length / rowsPerPage);
+
+            for (let i = 1; i <= totalPages; i++) {
+                const btn = `<button onclick="goToPage(${i})" 
+                            class="px-4 py-2 border rounded-lg ${i === currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-blue-100 transition'}">${i}</button>`;
+                pagination.innerHTML += btn;
+            }
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            displayTable();
+        }
+
+        document.getElementById('darkModeToggle').addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+        });
+
+        fetchDetections();
+    </script>
+</body>
+</html>
